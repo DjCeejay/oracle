@@ -85,6 +85,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const submissionBody = new URLSearchParams();
       filteredEntries.forEach(([key, value]) => submissionBody.append(key, value));
 
+      let responseStatus;
+      let responsePayloadSnippet = "";
+
       try {
         setSubmittingState(true);
 
@@ -94,8 +97,23 @@ document.addEventListener("DOMContentLoaded", () => {
           body: submissionBody
         });
 
-        if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`);
+        responseStatus = response.status;
+
+        const responseText = await response.text();
+        responsePayloadSnippet = responseText.slice(0, 120);
+
+        let parsedResponse;
+        try {
+          parsedResponse = JSON.parse(responseText);
+        } catch (parseError) {
+          parsedResponse = null;
+        }
+
+        if (!response.ok || (parsedResponse && parsedResponse.success === false)) {
+          const errorMessage =
+            parsedResponse?.error ||
+            `Request failed with status ${response.status}${responseText ? `: ${responsePayloadSnippet}` : ""}`;
+          throw new Error(errorMessage);
         }
 
         renderNotice(
@@ -122,13 +140,24 @@ document.addEventListener("DOMContentLoaded", () => {
           group.querySelectorAll("label").forEach((label) => label.classList.remove("is-selected"));
         });
       } catch (error) {
-        console.error("Waitlist submission failed:", error);
+        console.error("Waitlist submission failed:", {
+          message: error instanceof Error ? error.message : String(error),
+          status: typeof responseStatus === "number" ? responseStatus : "unknown",
+          responsePreview: responsePayloadSnippet
+        });
 
         renderNotice(
           "error",
           `
             <strong>We couldn't submit your details.</strong>
             <p>Please check your internet connection or verify the Google Apps Script deployment, then try again.</p>
+            ${
+              responseStatus
+                ? `<p>Status: <code>${responseStatus}</code>${
+                    responsePayloadSnippet ? ` · Response Preview: <code>${escapeHTML(responsePayloadSnippet)}</code>` : ""
+                  }</p>`
+                : ""
+            }
           `
         );
       } finally {
