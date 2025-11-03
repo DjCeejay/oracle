@@ -1,3 +1,5 @@
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxicxWrCyMDUWvp6Iw0R2CJQ2TqQqp9ZlY16uUb8HJMZF51fKQAKzC92ULAGQ2pwAZ-/exec"; // TODO: Replace with your deployed Apps Script URL
+
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("waitlist-form");
   const industrySelect = document.getElementById("industry");
@@ -22,7 +24,38 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (form) {
-    form.addEventListener("submit", (event) => {
+    const submitButton = form.querySelector('button[type="submit"]');
+
+    const setSubmittingState = (isSubmitting) => {
+      if (!submitButton) return;
+
+      if (!submitButton.dataset.initialLabel) {
+        submitButton.dataset.initialLabel = submitButton.textContent?.trim() || "Submit";
+      }
+
+      submitButton.disabled = isSubmitting;
+      submitButton.textContent = isSubmitting ? "Sending..." : submitButton.dataset.initialLabel;
+    };
+
+    const renderNotice = (type, template) => {
+      const existingNotice = form.querySelector(".form-notice");
+      if (existingNotice) {
+        existingNotice.remove();
+      }
+
+      const notice = document.createElement("div");
+      notice.className = "form-notice";
+
+      if (type === "error") {
+        notice.classList.add("form-notice--error");
+      }
+
+      notice.innerHTML = template;
+      form.appendChild(notice);
+      notice.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
 
       if (!form.checkValidity()) {
@@ -30,35 +63,78 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const formData = new FormData(form);
-      const payload = Object.fromEntries(formData.entries());
-
-      // rudimentary feedback element to inform users
-      const notice = document.createElement("div");
-      notice.className = "form-notice";
-      notice.innerHTML = `
-        <strong>You're on the list!</strong>
-        <p>We'll reach out soon with early access details. Here's what you told us:</p>
-        <ul>
-          ${Object.entries(payload)
-            .map(([key, value]) => `<li><span>${formatLabel(key)}:</span> ${value}</li>`)
-            .join("")}
-        </ul>
-      `;
-
-      const existingNotice = form.querySelector(".form-notice");
-      if (existingNotice) {
-        existingNotice.remove();
+      if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("YOUR_DEPLOYMENT_ID")) {
+        renderNotice(
+          "error",
+          `
+            <strong>Submission blocked.</strong>
+            <p>The waitlist form needs a valid Google Apps Script endpoint. Update <code>GOOGLE_SCRIPT_URL</code> in <code>script.js</code> with your deployed Web App URL.</p>
+          `
+        );
+        return;
       }
 
-      form.appendChild(notice);
-      form.reset();
-      otherIndustryField.classList.remove("visible");
-      otherIndustryInput.required = false;
-      optionGroups.forEach((group) => {
-        group.querySelectorAll("label").forEach((label) => label.classList.remove("is-selected"));
-      });
-      form.scrollIntoView({ behavior: "smooth", block: "start" });
+      const formData = new FormData(form);
+      const sanitizedEntries = [...formData.entries()].map(([key, value]) => [
+        key,
+        typeof value === "string" ? value.trim() : value
+      ]);
+
+      const filteredEntries = sanitizedEntries.filter(([key, value]) => !(key === "otherIndustry" && value === ""));
+      const payload = Object.fromEntries(filteredEntries);
+      const submissionBody = new URLSearchParams();
+      filteredEntries.forEach(([key, value]) => submissionBody.append(key, value));
+
+      try {
+        setSubmittingState(true);
+
+        const response = await fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          mode: "cors",
+          body: submissionBody
+        });
+
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+
+        renderNotice(
+          "success",
+          `
+            <strong>You're on the list!</strong>
+            <p>We'll reach out soon with early access details. Here's what you told us:</p>
+            <ul>
+              ${Object.entries(payload)
+                .map(([key, value]) => `<li><span>${formatLabel(key)}:</span> ${escapeHTML(String(value))}</li>`)
+                .join("")}
+            </ul>
+          `
+        );
+
+        form.reset();
+        if (otherIndustryField) {
+          otherIndustryField.classList.remove("visible");
+        }
+        if (otherIndustryInput) {
+          otherIndustryInput.required = false;
+        }
+        optionGroups.forEach((group) => {
+          group.querySelectorAll("label").forEach((label) => label.classList.remove("is-selected"));
+        });
+      } catch (error) {
+        console.error("Waitlist submission failed:", error);
+
+        renderNotice(
+          "error",
+          `
+            <strong>We couldn't submit your details.</strong>
+            <p>Please check your internet connection or verify the Google Apps Script deployment, then try again.</p>
+          `
+        );
+      } finally {
+        setSubmittingState(false);
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     });
   }
 
@@ -116,4 +192,10 @@ function formatLabel(key) {
   };
 
   return lookup[key] || key;
+}
+
+function escapeHTML(value) {
+  const div = document.createElement("div");
+  div.textContent = value;
+  return div.innerHTML;
 }

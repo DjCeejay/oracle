@@ -112,7 +112,7 @@ a {
 }
 
 .brand-mark img {
-  width: clamp(140px, 18vw, 190px);
+  width: clamp(70px, 10vw, 110px);
   height: auto;
   object-fit: contain;
   filter: drop-shadow(0 12px 25px rgba(0, 0, 0, 0.25));
@@ -123,7 +123,7 @@ a {
 }
 
 .brand-mark--nav {
-  max-width: 180px;
+  max-width: 150px;
 }
 
 .brand-mark--cta {
@@ -135,6 +135,12 @@ a {
 
 .brand-mark--footer {
   max-width: 140px;
+}
+
+@media (max-width: 600px) {
+  .brand-mark img {
+    width: clamp(5px, 30vw, 20px);
+  }
 }
 
 h1,
@@ -230,6 +236,7 @@ p {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   width: fit-content;
+  align-self: center;
 }
 
 .hero__subhead {
@@ -320,7 +327,7 @@ p {
 }
 
 .hero__form-header img {
-  width: 70px;
+  width: 56px;
   height: auto;
   filter: drop-shadow(0 8px 18px rgba(0, 191, 165, 0.3));
 }
@@ -506,6 +513,30 @@ p {
 .form-notice span {
   color: var(--color-secondary);
   font-weight: 600;
+}
+
+.form-notice code {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: 0.85rem;
+  background: rgba(232, 236, 255, 0.12);
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+  color: var(--color-accent);
+}
+
+.form-notice--error {
+  border-color: rgba(255, 99, 132, 0.55);
+  background: rgba(255, 99, 132, 0.15);
+  color: #ffe7ed;
+}
+
+.form-notice--error p,
+.form-notice--error ul {
+  color: #ffe7ed;
+}
+
+.form-notice--error span {
+  color: #ffb0c1;
 }
 
 .section {
@@ -823,7 +854,7 @@ p {
   }
 
   .hero__form-header img {
-    width: 60px;
+    width: 45px;
   }
 
   .feature-list li {
