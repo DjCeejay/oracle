@@ -179,6 +179,8 @@ p {
     linear-gradient(135deg, rgba(26, 35, 126, 0.96), rgba(11, 16, 47, 0.92));
   position: relative;
   overflow: hidden;
+  isolation: isolate;
+  will-change: transform;
 }
 
 .hero::before,
@@ -188,6 +190,26 @@ p {
   border-radius: 50%;
   background: radial-gradient(circle, rgba(0, 191, 165, 0.35), transparent 70%);
   filter: blur(4px);
+  pointer-events: none;
+}
+
+@supports (-webkit-touch-callout: none) {
+  .hero {
+    overflow: visible;
+  }
+
+  .hero__form-wrapper {
+    background: rgba(11, 16, 47, 0.8);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .highlight,
+  .form-options label {
+    background: rgba(11, 16, 47, 0.65);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 .hero::before {
@@ -300,6 +322,7 @@ p {
   gap: 1.5rem;
   margin: 0 auto;
   width: min(720px, 100%);
+  will-change: transform;
 }
 
 .hero__form-wrapper::before {
